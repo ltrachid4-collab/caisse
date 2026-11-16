@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function isMember() { return signedIn() && exists(userDoc()); }
+    function isAdmin() { return isMember() && get(userDoc()).data.role == 'admin'; }
+    function validAmount() {
+      return request.resource.data.amount is number && request.resource.data.amount > 0;
+    }
+
+    // Marker document: created once, by the first admin only.
+    match /meta/admin {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && !exists(/databases/$(database)/documents/meta/admin)
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /users/{id} {
+      allow get: if signedIn() && (request.auth.uid == id || isMember());
+      allow list: if isMember();
+      // Admin adds members. The very first admin creates their own profile
+      // in the same batch that creates meta/admin.
+      allow create: if (isAdmin() && request.resource.data.role == 'member')
+                    || (signedIn() && request.auth.uid == id
+                        && request.resource.data.role == 'admin'
+                        && !exists(/databases/$(database)/documents/meta/admin)
+                        && getAfter(/databases/$(database)/documents/meta/admin).data.uid == request.auth.uid);
+      // Admin can rename a member (phone and role cannot change).
+      allow update: if isAdmin()
+                    && resource.data.role == 'member'
+                    && request.resource.data.role == 'member'
+                    && request.resource.data.phone == resource.data.phone
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
+      // Admin can remove a member profile (never the admin).
+      allow delete: if isAdmin() && resource.data.role == 'member';
+    }
+
+    match /contribs/{id} {
+      allow read: if isMember();
+      // A member can only submit their own contribution as "pending".
+      allow create: if validAmount()
+                    && (isAdmin()
+                        || (isMember()
+                            && request.resource.data.memberId == request.auth.uid
+                            && request.resource.data.status == 'pending'));
+      // Admin can approve, reject, or correct amount/comment.
+      allow update: if isAdmin() && validAmount()
+                    && request.resource.data.status in ['pending', 'ok', 'rejected'];
+      allow delete: if isAdmin();
+    }
+
+    // Father's payments and monthly amount (admin only writes).
+    match /meta/source {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /payments/{id} {
+      allow read: if isMember();
+      // Admin, or the member chosen by the admin as recorder.
+      allow create: if validAmount() && (isAdmin() || (isMember() && exists(/databases/$(database)/documents/meta/source) && get(/databases/$(database)/documents/meta/source).data.recorderId == request.auth.uid));
+      allow update, delete: if isAdmin();
+    }
+
+    match /expenses/{id} {
+      allow read: if isMember();
+      allow create: if isAdmin() && validAmount();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

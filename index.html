@@ -70,7 +70,7 @@ const FIREBASE_CONFIG={
 </script>
 <script>
 const MONTHS=['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
-let db={members:[],contribs:[],expenses:[]},session=null,tab='home',curMonth=monthKey(Date.now());
+let db={members:[],contribs:[],expenses:[],payments:[]},SRC_MONTHLY=500,SRC_RECORDER=null,session=null,tab='home',curMonth=monthKey(Date.now());
 
 const $=s=>document.querySelector(s);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -287,24 +287,25 @@ const backend={
   update:function(c,id,o){return FS.collection(c).doc(id).update(o)},
   del:function(c,id){return FS.collection(c).doc(id).delete()},
   start:function(on,onErr){
-    ['users','contribs','expenses'].forEach(function(c){
+    ['users','contribs','expenses','payments'].forEach(function(c){
       unsubs.push(FS.collection(c).onSnapshot(function(snap){
         on(c==='users'?'members':c,snap.docs.map(function(d){return Object.assign({id:d.id},d.data())}));
       },onErr));
     });
   },
+  startSrc:function(){unsubs.push(FS.collection('meta').doc('source').onSnapshot(function(s){SRC_MONTHLY=(s.data()||{}).monthly||500;SRC_RECORDER=(s.data()||{}).recorderId||null;refresh()},function(){}))},
   stop:function(){unsubs.forEach(function(f){f()});unsubs=[]}
 };
 
 function onAuth(user){
   if(signing)return;
-  backend.stop();db={members:[],contribs:[],expenses:[]};session=null;tab='home';
+  backend.stop();db={members:[],contribs:[],expenses:[],payments:[]};session=null;tab='home';
   if(!user){boot='out';render();return}
   boot='loading';render();
   backend.getUser(user.uid).then(function(s){
     if(s.exists){
       session=user.uid;boot='ready';
-      backend.start(function(n,a){db[n]=a;refresh()},function(){boot='out';backend.logout()});
+      backend.start(function(n,a){db[n]=a;refresh()},function(){boot='out';backend.logout()});backend.startSrc();
       render();
     }else{boot='nouser';render()}
   }).catch(function(){boot='nouser';render()});
@@ -361,6 +362,28 @@ function prevKey(k){const p=k.split('-'),d=new Date(Number(p[0]),Number(p[1])-2,
 function cBal(k){return sum(bef(okC(),k))-outSum(bef(db.expenses,k))}
 function cards3(a,la,b,lb,c,lc){return '<div class="cards"><div class="m g"><b class="in">'+money(a)+'</b><span>'+la+'</span></div><div class="m r"><b class="out">'+money(b)+'</b><span>'+lb+'</span></div><div class="m b"><b style="color:var(--ac)">'+money(c)+'</b><span>'+lc+'</span></div></div>'}
 function listBox(arr,empty){return '<div class="card">'+(arr.length?arr.map(opRow).join(''):'<div class="empty">'+empty+'</div>')+'</div>'}
+function srcKey(y,m){return y+'-'+pad(m)}
+function srcPaid(){const st=new Set();db.payments.forEach(function(p){(p.months||[]).forEach(function(m){st.add(m)})});return st}
+function srcStats(){
+  const y=new Date().getFullYear(),now=new Date().getMonth()+1,paid=srcPaid(),unpaid=[];
+  for(let m=1;m<=now;m++){if(!paid.has(srcKey(y,m)))unpaid.push(m)}
+  const got=db.payments.reduce(function(t,p){return t+(Number(p.amount)||0)},0);
+  return {y:y,now:now,unpaid:unpaid,got:got,owed:unpaid.length*SRC_MONTHLY}
+}
+function srcGrid(){
+  const s=srcStats(),paid=srcPaid();let h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+  for(let m=1;m<=12;m++){
+    const ok=paid.has(srcKey(s.y,m)),future=m>s.now;
+    const bg=ok?'#EAF3DE':future?'#f1f1ee':'#FCEBEB',fg=ok?'#27500A':future?'#888':'#791F1F';
+    h+='<div style="border-radius:10px;padding:8px;text-align:center;font-size:13px;background:'+bg+';color:'+fg+'"><b>'+MONTHS[m-1]+'</b><div>'+(ok?'خلص':future?'—':'ماخلاصش')+'</div></div>'
+  }
+  return h+'</div>';
+}
+function srcCard(){
+  const s=srcStats();
+  return '<h3>الدار آزرو · '+s.y+'</h3><div class="card">'+srcGrid()+
+  '<div class="cards" style="margin-top:12px"><div class="m g"><b class="in">'+money(s.got)+'</b><span>مجموع الدفعات</span></div><div class="m r"><b class="out">'+s.unpaid.length+' شهر</b><span>ماخلاصش</span></div><div class="m b"><b style="color:var(--ac)">'+money(s.owed)+'</b><span>الباقي عليه</span></div></div></div>';
+}
 function homeView(me){
   const i=sum(okC()),o=outSum(db.expenses),mk=monthKey(Date.now()),list=ops({contribs:inM(okC(),mk),expenses:inM(db.expenses,mk)});
   return banner(me)+cards3(i,'الداخل',o,'الخارج',i-o,'المتبقي')+
@@ -419,7 +442,32 @@ function adminBase(){
   '<div class="card"><h3 style="margin-top:0">سلفة الشهر</h3><label>العضو</label><select id="lm">'+db.members.map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join('')+'</select><label>المبلغ بالدرهم</label><input id="la" type="text" inputmode="decimal"><div class="err" id="err2"></div><button class="main" style="margin-top:8px" onclick="addLoan()">تسجيل السلفة</button></div>'+
   repayCard()+'<h3>مصاريف وسلف هذا الشهر</h3><div class="card">'+(list.length?list.map(e=>opRow(expOp(e))).join(''):'<div class="empty">لا توجد مصاريف بعد.</div>')+'</div>';
 }
+function srcSettings(){
+  const sel='<select id="sm_r"><option value="">بلا</option>'+db.members.map(function(m){return '<option value="'+m.id+'"'+(m.id===SRC_RECORDER?' selected':'')+'>'+esc(m.name)+'</option>'}).join('')+'</select>';
+  return '<div class="card"><h3 style="margin-top:0">إعدادات الدار آزرو</h3><label>المبلغ الشهري بالدرهم</label><input id="sm_m" type="text" inputmode="decimal" value="'+SRC_MONTHLY+'"><button class="main" style="margin-top:8px" onclick="saveMonthly()">حفظ المبلغ الشهري</button><hr><label>العضو اللي يقدر يسجل الدفعات</label>'+sel+'<button class="main" style="margin-top:8px" onclick="saveRecorder()">حفظ</button></div>';
+}
+function srcForm(isAdm){
+  const s=srcStats(),boxes=[];
+  for(let m=1;m<=12;m++){boxes.push('<label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" class="sm" value="'+srcKey(s.y,m)+'" style="width:auto">'+MONTHS[m-1]+'</label>')}
+  const today=new Date(),iso=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
+  const list=db.payments.slice().sort(function(a,b){return b.ts-a.ts}).slice(0,10).map(function(p){
+    return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee"><span>'+money(p.amount)+' · '+(p.months||[]).map(monthLabel).join('، ')+' · '+fmtDate(p.ts)+'</span>'+(isAdm?delBtn('pay'+p.id,"deletePay('"+p.id+"')"):'')+'</div>'}).join('');
+  return '<div class="card"><h3 style="margin-top:0">تسجيل دفعة</h3><label>تاريخ الدفعة</label><input id="sp_d" type="date" value="'+iso+'"><label>المبلغ بالدرهم</label><input id="sp_a" type="text" inputmode="decimal" value="'+SRC_MONTHLY+'"><label>الشهور اللي خلصها</label>'+boxes.join('')+
+  '<div class="err" id="err5"></div><button class="main" style="margin-top:8px" onclick="addPayment()">تسجيل الدفعة</button>'+
+  (list?'<h3>آخر الدفعات</h3>'+list:'')+'</div>';
+}
+function saveRecorder(){const v=$('#sm_r').value;FS.collection('meta').doc('source').set({recorderId:v||null},{merge:true}).then(render).catch(function(e){toast(fbMsg(e))})}
+function saveMonthly(){const v=num($('#sm_m').value);if(!(v>0)){toast('أدخل مبلغا صحيحا');return}FS.collection('meta').doc('source').set({monthly:v},{merge:true}).then(render).catch(function(e){toast(fbMsg(e))})}
+function addPayment(){
+  const a=num($('#sp_a').value),d=$('#sp_d').value,ms=[].map.call(document.querySelectorAll('.sm:checked'),function(x){return x.value});
+  if(!(a>0))return $('#err5').textContent='أدخل مبلغا صحيحا';
+  if(!d)return $('#err5').textContent='اختار التاريخ';
+  if(!ms.length)return $('#err5').textContent='اختار شهرا واحدا على الأقل';
+  backend.add('payments',{amount:a,ts:new Date(d+'T12:00:00').getTime(),months:ms}).then(render).catch(fail('err5'));
+}
+function deletePay(id){backend.del('payments',id).then(function(){delKey=null}).catch(function(e){toast(fbMsg(e))})}
 function adminView(){return adminBase()+fixView()}
+function darView(me){const isAdm=me.role==='admin',canRec=isAdm||me.id===SRC_RECORDER;return '<h2>الدار آزرو</h2>'+srcCard()+(isAdm?srcSettings():'')+(canRec?srcForm(isAdm):'')}
 function addExpense(){
   const t=$('#et').value.trim(),a=num($('#ea').value);
   if(!t)return $('#err1').textContent='أدخل البيان';
@@ -441,10 +489,10 @@ function render(){
   if(boot==='nouser'){el.innerHTML=nouserView();return}
   const me=cur();
   if(!me){el.innerHTML=loadingView();return}
-  const tabs=[['home','الرئيسية'],['month','الشهر'],['pay','المساهمة'],['members','الأعضاء']];
+  const tabs=[['home','الرئيسية'],['month','الشهر'],['pay','المساهمة'],['dar','الدار آزرو'],['members','الأعضاء']];
   if(me.role==='admin')tabs.push(['admin','الإدارة'+(pendN()?' ('+pendN()+')':'')]);
   if(!tabs.some(t=>t[0]===tab))tab='home';
-  const views={home:homeView,month:monthView,pay:payView,members:membersView,admin:adminView};
+  const views={home:homeView,month:monthView,pay:payView,dar:darView,members:membersView,admin:adminView};
   el.innerHTML='<header><span style="display:flex;align-items:center;gap:8px">'+LOGO(28)+'<b>الصندوق المشترك</b></span><button class="link" onclick="toggleLang()">'+(LANG==='ar'?'Français':'العربية')+'</button><button class="link" onclick="logout()">خروج ('+esc(me.name)+')</button></header><main>'+views[tab](me)+'</main><nav>'+tabs.map(t=>'<button class="'+(t[0]===tab?'on':'')+'" onclick="go(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</nav>';
 }
 if(FIREBASE_CONFIG.apiKey){backend.init();backend.onAuth(onAuth)}
