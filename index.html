@@ -87,6 +87,80 @@ const err=t=>{const e=$('#err');if(e)e.textContent=t};
 
 
 const LOGO=function(sz){return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 64 64" aria-hidden="true" style="display:block"><rect x="2" y="2" width="60" height="60" rx="16" fill="#ffffff" fill-opacity=".14"/><circle cx="30" cy="34" r="20" fill="#fac775" stroke="#ba7517" stroke-width="2"/><circle cx="30" cy="34" r="15" fill="none" stroke="#ba7517" stroke-width="1.2" stroke-dasharray="2 2"/><text x="30" y="43" text-anchor="middle" font-size="22" font-weight="500" fill="#854f0b">$</text><path d="M44 16 L53 7 M46 7 L53 7 L53 14" stroke="#fff3d6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
+let LANG='ar';try{LANG=localStorage.getItem('caisse_lang')||'ar'}catch(e){}
+const FR={
+'الصندوق المشترك':'Caisse commune','الرئيسية':'Accueil','الشهر':'Mois','المساهمة':'Cotisation','الأعضاء':'Membres','الإدارة':'Admin',
+'خروج (':'Sortie (','الداخل هاد الشهر':'Entrées du mois','الخارج هاد الشهر':'Sorties du mois','فالصندوق دابا':'Solde actuel',
+'المتبقي عند الأعضاء':'Reste chez les membres','الداخل':'Entrées','الخارج':'Sorties','المتبقي':'Solde','المصروف':'Dépenses','المساهمات':'Cotisations',
+'مساهمات الأعضاء':'Cotisations des membres','نسبة المصروف':'Part dépensée','مصروف':'dépensé','آخر 6 أشهر':'6 derniers mois','آخر العمليات':'Dernières opérations',
+'لا توجد عمليات فهاد الشهر بعد.':'Aucune opération ce mois-ci.','لا توجد عمليات بعد.':'Aucune opération pour le moment.',
+'لا توجد مساهمات في هذا الشهر.':'Aucune cotisation ce mois-ci.','لا توجد مصاريف في هذا الشهر.':'Aucune dépense ce mois-ci.',
+'لا توجد مساهمات في الانتظار.':'Aucune cotisation en attente.','لا توجد مصاريف بعد.':'Aucune dépense pour le moment.','لا توجد مساهمات.':'Aucune cotisation.','لا توجد مصاريف.':'Aucune dépense.',
+'لا يوجد أعضاء.':'Aucun membre.','لا توجد سلف غير مسترجعة.':'Aucun prêt en cours.','لا توجد سلف بعد.':'Aucun prêt pour le moment.',
+'فالصندوق من الشهر السابق (':'Reporté du mois précédent (','السلف':'Prêts','اقترض ':'a emprunté ','متبقي ':'reste ','المجموع':'Total','مسترجعة':'remboursé',
+'مساهمة في انتظار تأكيدك':'cotisation en attente de votre confirmation','مساهمات في الانتظار':'Cotisations en attente','مراجعة':'Voir',
+'تأكيد المساهمة':'Confirmer la cotisation','تأكيد الحذف':'Confirmer la suppression','تأكيد':'Confirmer','رفض':'Refuser','تعديل الاسم':'Modifier le nom','تعديل':'Modifier','حذف':'Supprimer','حفظ':'Enregistrer','إلغاء':'Annuler',
+'تسجيل مصروف':'Enregistrer une dépense','البيان':'Libellé','المبلغ بالدرهم':'Montant (DH)','المبلغ':'Montant','إضافة مصروف':'Ajouter la dépense',
+'سلفة الشهر':'Prêt du mois','العضو':'Membre','تسجيل السلفة':'Enregistrer le prêt','إرجاع سلفة':'Rembourser un prêt','تسجيل الإرجاع':'Enregistrer le remboursement',
+'المبلغ المرجع بالدرهم':'Montant remboursé (DH)','مصاريف وسلف هذا الشهر':'Dépenses et prêts ce mois-ci','المصاريف والسلف والإرجاع':'Dépenses, prêts et remboursements',
+'المصاريف والسلف':'Dépenses et prêts','إرجاع سلفة من':'Remboursement de','سلفة لـ':'Prêt à ','شراء مستلزمات':'Achat de fournitures',
+'تصحيح الأخطاء':'Corrections','المساهمات المؤكدة':'Cotisations confirmées','إضافة عضو':'Ajouter un membre','الاسم':'Nom','رقم الهاتف':'Téléphone',
+'كلمة مرور مؤقتة (6 أحرف على الأقل)':'Mot de passe provisoire (6 caractères min.)','إضافة':'Ajouter','(أدمن)':'(admin)',
+'ليست لديك صلاحية لهذه العملية':"Vous n'avez pas l'autorisation",
+'مساهمة شهر':'Cotisation de','اسم المساهم':'Nom du membre','تعليق (اختياري)':'Commentaire (facultatif)','تعليق':'Commentaire','أضف ملاحظة':'Ajoutez une note',
+'نعم، أؤكد':'Oui, je confirme','رجوع':'Retour','بعد التأكيد لا يمكن تعديل المبلغ ولا التعليق.':'Après confirmation, le montant et le commentaire ne peuvent plus être modifiés.',
+'هل تريد المتابعة؟':'Voulez-vous continuer ?','سجلت في':'Enregistré le','لا يمكن تعديلها.':'Modification impossible.',
+'في انتظار تأكيد الأدمن. لن تظهر في لوحة القيادة قبل تأكيدها.':"En attente de confirmation par l'admin. Elle n'apparaîtra pas avant.",
+'أكدها الأدمن وظهرت في لوحة القيادة.':"Confirmée par l'admin et affichée au tableau de bord.",
+'رفض الأدمن مساهمتك السابقة. يمكنك إرسال مساهمة جديدة.':"L'admin a refusé votre cotisation. Vous pouvez en envoyer une nouvelle.",
+'سجل دخولك برقم هاتفك وكلمة المرور':'Connectez-vous avec votre numéro et votre mot de passe','دخول':'Connexion','متابعة':'Continuer',
+'أول استعمال؟ إنشاء حساب الأدمن':'Première utilisation ? Créer le compte admin','رجوع لتسجيل الدخول':'Retour à la connexion',
+'إنشاء حساب الأدمن':'Créer le compte admin','إنشاء الحساب':'Créer le compte','كلمة المرور (6 أحرف على الأقل)':'Mot de passe (6 caractères min.)','كلمة المرور':'Mot de passe',
+'يُنشأ هذا الحساب مرة واحدة فقط. هو يتحكم في المصاريف والسلف ويضيف الأعضاء.':'Ce compte est créé une seule fois. Il gère les dépenses et les prêts et ajoute les membres.',
+'حسابك غير مفعل':"Votre compte n'est pas activé",'هذا الرقم غير مسجل عند الأدمن. تواصل معه ليضيفك.':"Ce numéro n'est pas enregistré chez l'admin. Contactez-le pour être ajouté.",
+'جار التحميل…':'Chargement…','لحظة من فضلك':'Un instant svp','جار الدخول…':'Connexion…','جار الإنشاء…':'Création…','جار الإضافة…':'Ajout…','جار الحفظ…':'Enregistrement…',
+'رقم الهاتف أو كلمة المرور غير صحيحة':'Numéro ou mot de passe incorrect','أدخل رقم الهاتف وكلمة المرور':'Entrez le numéro et le mot de passe',
+'أدخل الاسم ورقم الهاتف':'Entrez le nom et le numéro','أدخل مبلغا صحيحا':'Entrez un montant valide','أدخل البيان':'Entrez le libellé','أدخل الاسم':'Entrez le nom',
+'كلمة المرور يجب أن تكون 6 أحرف على الأقل':'Le mot de passe doit contenir au moins 6 caractères','كلمة المرور ضعيفة (6 أحرف على الأقل)':'Mot de passe trop faible (6 caractères min.)',
+'هذا الرقم مسجل من قبل':'Ce numéro est déjà enregistré','وقع خطأ. جرب مرة أخرى.':'Une erreur est survenue. Réessayez.','لا يوجد اتصال بالإنترنت.':'Pas de connexion Internet.',
+'محاولات كثيرة. جرب بعد قليل.':'Trop de tentatives. Réessayez plus tard.','خطوة أخيرة قبل الاستعمال':'Dernière étape avant utilisation',
+'الأدمن موجود مسبقا. سجل دخولك.':'Un admin existe déjà. Connectez-vous.',
+'مساهمة شهر':'Cotisation de','فبراير':'février','يناير':'janvier','مارس':'mars','أبريل':'avril','ماي':'mai','يونيو':'juin','يوليوز':'juillet','غشت':'août','شتنبر':'septembre','أكتوبر':'octobre','نونبر':'novembre','دجنبر':'décembre',
+'آخر العمليات · ':'Dernières opérations · ','مصاريف وسلف':'Dépenses et prêts','مساهمة':'Cotisation','الداخل':'Entrées','الشهر':'Mois',
+'وقت':'heure','المصروف':'Dépenses','جار':'en cours','سجل':'Enregistrer'
+};
+const FRK=Object.keys(FR).sort(function(a,b){return b.length-a.length});
+function tr(h){if(LANG!=='fr')return h;let o=h;FRK.forEach(function(k){if(o.indexOf(k)>=0)o=o.split(k).join(FR[k])});return o}
+function toggleLang(){LANG=LANG==='ar'?'fr':'ar';try{localStorage.setItem('caisse_lang',LANG)}catch(e){}render()}
+let editKey=null,delKey=null;
+function delBtn(key,fn){return delKey===key?'<button class="danger" onclick="'+fn+'">تأكيد الحذف</button>':'<button onclick="askDel(\''+key+'\')">حذف</button>'}
+function askDel(k){delKey=k;render()}
+function fixView(){
+  const cs=okC().slice().sort(function(a,b){return b.ts-a.ts}).slice(0,40);
+  const ex=db.expenses.slice().sort(function(a,b){return b.ts-a.ts}).slice(0,40);
+  const ms=db.members.filter(function(m){return m.role!=='admin'});
+  let h='<h3>تصحيح الأخطاء</h3>';
+  h+='<div class="card"><b>المساهمات المؤكدة (آخر 40)</b>'+(cs.length?cs.map(function(c){
+    const k='c:'+c.id;
+    if(editKey===k)return '<div class="row" style="flex-direction:column"><b>'+esc(nameOf(c.memberId))+'</b><label>المبلغ بالدرهم</label><input id="ee" type="text" value="'+c.amount+'"><label>تعليق</label><input id="ec" value="'+esc(c.comment||'')+'"><div class="err" id="err4"></div><div class="row2"><button class="ok" onclick="saveContrib(\''+c.id+'\')">حفظ</button><button onclick="editKey=null;render()">إلغاء</button></div></div>';
+    return '<div class="row"><div>'+esc(nameOf(c.memberId))+'<small>'+fmtDate(c.ts)+'</small>'+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</div><div style="text-align:left"><b>'+money(c.amount)+'</b><div class="row2"><button onclick="editKey=\''+k+'\';render()">تعديل</button>'+delBtn(k,'deleteContrib(\''+c.id+'\')')+'</div></div></div>';
+  }).join(''):'<div class="empty">لا توجد مساهمات.</div>')+'</div>';
+  h+='<div class="card"><b>المصاريف والسلف (آخر 40)</b>'+(ex.length?ex.map(function(e){
+    const k='e:'+e.id;
+    return '<div class="row"><div>'+esc(e.title)+'<small>'+fmtDate(e.ts)+'</small></div><div style="text-align:left"><b>'+money(e.amount)+'</b><div class="row2">'+delBtn(k,'deleteExp(\''+e.id+'\')')+'</div></div></div>';
+  }).join(''):'<div class="empty">لا توجد مصاريف.</div>')+'</div>';
+  h+='<div class="card"><b>الأعضاء</b>'+(ms.length?ms.map(function(m){
+    const k='m:'+m.id;
+    if(editKey===k)return '<div class="row" style="flex-direction:column"><label style="margin-top:0">الاسم</label><input id="en" value="'+esc(m.name)+'"><small>رقم الهاتف ما يتبدلش. لتغييره، احذف العضو وزيده من جديد.</small><div class="row2"><button class="ok" onclick="saveMember(\''+m.id+'\')">حفظ</button><button onclick="editKey=null;render()">إلغاء</button></div></div>';
+    return '<div class="row"><div>'+esc(m.name)+'<small>'+esc(m.phone)+'</small></div><div class="row2" style="margin-top:0"><button onclick="editKey=\''+k+'\';render()">تعديل الاسم</button>'+delBtn(k,'deleteMember(\''+m.id+'\')')+'</div></div>';
+  }).join(''):'<div class="empty">لا يوجد أعضاء.</div>')+'</div>';
+  return h;
+}
+function saveContrib(id){const a=num($('#ee').value),c=$('#ec').value.trim();if(!(a>0)){$('#err4').textContent='أدخل مبلغا صحيحا';return}backend.update('contribs',id,{amount:a,comment:c}).then(function(){editKey=null;render()}).catch(function(e){toast(fbMsg(e))})}
+function deleteContrib(id){backend.del('contribs',id).then(function(){delKey=null}).catch(function(e){toast(fbMsg(e))})}
+function deleteExp(id){backend.del('expenses',id).then(function(){delKey=null}).catch(function(e){toast(fbMsg(e))})}
+function saveMember(id){const n=$('#en').value.trim();if(!n){toast('أدخل الاسم');return}backend.update('users',id,{name:n}).then(function(){editKey=null;render()}).catch(function(e){toast(fbMsg(e))})}
+function deleteMember(id){backend.del('users',id).then(function(){delKey=null}).catch(function(e){toast(fbMsg(e))})}
 const PAL=['#378add','#1d9e75','#d85a30','#7f77dd','#ba7517','#d4537e','#639922','#888780'];
 function num(v){v=String(v).trim().replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d)}).replace(/٫|,/g,'.');return Number(v)}
 function legend(a){return '<div class="lg">'+a.map(function(x){return '<span><i style="background:'+x[0]+'"></i>'+x[1]+'</span>'}).join('')+'</div>'}
@@ -210,6 +284,7 @@ const backend={
   },
   add:function(c,o){return FS.collection(c).add(o)},
   update:function(c,id,o){return FS.collection(c).doc(id).update(o)},
+  del:function(c,id){return FS.collection(c).doc(id).delete()},
   start:function(on,onErr){
     ['users','contribs','expenses'].forEach(function(c){
       unsubs.push(FS.collection(c).onSnapshot(function(snap){
@@ -324,7 +399,7 @@ function doPay(){
   backend.add('contribs',{memberId:me.id,amount:a,comment:c,ts:Date.now(),status:me.role==='admin'?'ok':'pending'}).then(function(){tab=me.role==='admin'?'home':'pay';render();window.scrollTo(0,0)}).catch(function(e){$('#cf').innerHTML='<div class="err">'+fbMsg(e)+'</div>'});
 }
 function membersView(me){
-  const rows=db.members.map(m=>'<div class="row"><div>'+esc(m.name)+(m.role==='admin'?' <small style="display:inline">(أدمن)</small>':'')+(me.role==='admin'?'<small>'+esc(m.phone)+'</small>':'')+'</div><b>'+money(sum(okC().filter(c=>c.memberId===m.id)))+'</b></div>').join('');
+  const rows=db.members.filter(m=>m.role!=='admin').map(m=>'<div class="row"><div>'+esc(m.name)+(m.role==='admin'?' <small style="display:inline">(أدمن)</small>':'')+(me.role==='admin'?'<small>'+esc(m.phone)+'</small>':'')+'</div><b>'+money(sum(okC().filter(c=>c.memberId===m.id)))+'</b></div>').join('');
   let form='';
   if(me.role==='admin')form='<h3>إضافة عضو</h3><div class="card"><label style="margin-top:0">الاسم</label><input id="n"><label>رقم الهاتف</label><input id="p" type="tel" inputmode="numeric"><label>كلمة مرور مؤقتة (6 أحرف على الأقل)</label><input id="c" type="text"><div class="err" id="err"></div><button class="main" onclick="addMember()">إضافة</button></div>';
   return '<h2>الأعضاء</h2><div class="card">'+rows+'</div>'+form;
@@ -337,12 +412,13 @@ function addMember(){
   err('جار الإضافة…');
   backend.addMember(n,p,c).then(render).catch(function(e){err(fbMsg(e))});
 }
-function adminView(){
+function adminBase(){
   const k=monthKey(Date.now()),list=db.expenses.filter(e=>monthKey(e.ts)===k).sort((a,b)=>b.ts-a.ts);
   return '<h2>الإدارة</h2>'+pendingBox()+'<div class="card"><h3 style="margin-top:0">تسجيل مصروف</h3><label>البيان</label><input id="et" placeholder="شراء مستلزمات"><label>المبلغ بالدرهم</label><input id="ea" type="text" inputmode="decimal"><div class="err" id="err1"></div><button class="main" style="margin-top:8px" onclick="addExpense()">إضافة مصروف</button></div>'+
   '<div class="card"><h3 style="margin-top:0">سلفة الشهر</h3><label>العضو</label><select id="lm">'+db.members.map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join('')+'</select><label>المبلغ بالدرهم</label><input id="la" type="text" inputmode="decimal"><div class="err" id="err2"></div><button class="main" style="margin-top:8px" onclick="addLoan()">تسجيل السلفة</button></div>'+
   repayCard()+'<h3>مصاريف وسلف هذا الشهر</h3><div class="card">'+(list.length?list.map(e=>opRow(expOp(e))).join(''):'<div class="empty">لا توجد مصاريف بعد.</div>')+'</div>';
 }
+function adminView(){return adminBase()+fixView()}
 function addExpense(){
   const t=$('#et').value.trim(),a=num($('#ea').value);
   if(!t)return $('#err1').textContent='أدخل البيان';
@@ -357,7 +433,7 @@ function addLoan(){
 function go(t){tab=t;render();window.scrollTo(0,0)}
 
 function render(){
-  const el=$('#app');
+  const el={set innerHTML(h){document.documentElement.lang=LANG;document.documentElement.dir=LANG==='ar'?'rtl':'ltr';$('#app').innerHTML=tr(h)}};
   if(!FIREBASE_CONFIG.apiKey){el.innerHTML=configView();return}
   if(boot==='loading'){el.innerHTML=loadingView();return}
   if(boot==='out'){el.innerHTML=mode==='setup'?setupView():loginView();return}
@@ -368,7 +444,7 @@ function render(){
   if(me.role==='admin')tabs.push(['admin','الإدارة'+(pendN()?' ('+pendN()+')':'')]);
   if(!tabs.some(t=>t[0]===tab))tab='home';
   const views={home:homeView,month:monthView,pay:payView,members:membersView,admin:adminView};
-  el.innerHTML='<header><span style="display:flex;align-items:center;gap:8px">'+LOGO(28)+'<b>الصندوق المشترك</b></span><button class="link" onclick="logout()">خروج ('+esc(me.name)+')</button></header><main>'+views[tab](me)+'</main><nav>'+tabs.map(t=>'<button class="'+(t[0]===tab?'on':'')+'" onclick="go(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</nav>';
+  el.innerHTML='<header><span style="display:flex;align-items:center;gap:8px">'+LOGO(28)+'<b>الصندوق المشترك</b></span><button class="link" onclick="toggleLang()">'+(LANG==='ar'?'Français':'العربية')+'</button><button class="link" onclick="logout()">خروج ('+esc(me.name)+')</button></header><main>'+views[tab](me)+'</main><nav>'+tabs.map(t=>'<button class="'+(t[0]===tab?'on':'')+'" onclick="go(\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</nav>';
 }
 if(FIREBASE_CONFIG.apiKey){backend.init();backend.onAuth(onAuth)}
 render();
