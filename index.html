@@ -131,6 +131,7 @@ const FR={
 };
 const FRK=Object.keys(FR).sort(function(a,b){return b.length-a.length});
 function tr(h){if(LANG!=='fr')return h;let o=h;FRK.forEach(function(k){if(o.indexOf(k)>=0)o=o.split(k).join(FR[k])});return o}
+function doInstall(){const d=window.__dp;if(!d)return;d.prompt();d.userChoice.then(function(){window.__dp=null;render()})}
 function toggleLang(){LANG=LANG==='ar'?'fr':'ar';try{localStorage.setItem('caisse_lang',LANG)}catch(e){}render()}
 let editKey=null,delKey=null;
 function delBtn(key,fn){return delKey===key?'<button class="danger" onclick="'+fn+'">تأكيد الحذف</button>':'<button onclick="askDel(\''+key+'\')">حذف</button>'}
@@ -433,7 +434,7 @@ function addLoan(){
 function go(t){tab=t;render();window.scrollTo(0,0)}
 
 function render(){
-  const el={set innerHTML(h){document.documentElement.lang=LANG;document.documentElement.dir=LANG==='ar'?'rtl':'ltr';$('#app').innerHTML=tr(h)}};
+  const el={set innerHTML(h){document.documentElement.lang=LANG;document.documentElement.dir=LANG==='ar'?'rtl':'ltr';const ib=(window.__dp&&!(window.matchMedia&&matchMedia('(display-mode: standalone)').matches))?'<div class="card" style="text-align:center"><button class="main" style="margin-top:0" onclick="doInstall()">'+(LANG==='ar'?'تثبيت التطبيق على التيليفون':'Installer l\'application sur le téléphone')+'</button></div>':'';$('#app').innerHTML=tr(ib+h)}};
   if(!FIREBASE_CONFIG.apiKey){el.innerHTML=configView();return}
   if(boot==='loading'){el.innerHTML=loadingView();return}
   if(boot==='out'){el.innerHTML=mode==='setup'?setupView():loginView();return}
@@ -448,6 +449,11 @@ function render(){
 }
 if(FIREBASE_CONFIG.apiKey){backend.init();backend.onAuth(onAuth)}
 render();
+</script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__dp=e;render()});
+window.addEventListener('appinstalled',function(){window.__dp=null;render()});
 </script>
 </body>
 </html>
