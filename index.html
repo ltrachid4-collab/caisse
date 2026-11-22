@@ -144,7 +144,7 @@ function fixView(){
   h+='<div class="card"><b>المساهمات المؤكدة (آخر 40)</b>'+(cs.length?cs.map(function(c){
     const k='c:'+c.id;
     if(editKey===k)return '<div class="row" style="flex-direction:column"><b>'+esc(nameOf(c.memberId))+'</b><label>المبلغ بالدرهم</label><input id="ee" type="text" value="'+c.amount+'"><label>تعليق</label><input id="ec" value="'+esc(c.comment||'')+'"><div class="err" id="err4"></div><div class="row2"><button class="ok" onclick="saveContrib(\''+c.id+'\')">حفظ</button><button onclick="editKey=null;render()">إلغاء</button></div></div>';
-    return '<div class="row"><div>'+esc(nameOf(c.memberId))+'<small>'+fmtDate(c.ts)+'</small>'+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</div><div style="text-align:left"><b>'+money(c.amount)+'</b><div class="row2"><button onclick="editKey=\''+k+'\';render()">تعديل</button>'+delBtn(k,'deleteContrib(\''+c.id+'\')')+'</div></div></div>';
+    return '<div class="row"><div>'+esc(nameOf(c.memberId))+'<small>'+fmtDate(c.ts)+'</small>'+(c.paidTs?'<small>دفع فعليا: '+fmtDay(c.paidTs)+'</small>':'')+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</div><div style="text-align:left"><b>'+money(c.amount)+'</b><div class="row2"><button onclick="editKey=\''+k+'\';render()">تعديل</button><button onclick="backToPending(\''+c.id+'\')">للانتظار</button>'+delBtn(k,'deleteContrib(\''+c.id+'\')')+'</div></div></div>';
   }).join(''):'<div class="empty">لا توجد مساهمات.</div>')+'</div>';
   h+='<div class="card"><b>المصاريف والسلف (آخر 40)</b>'+(ex.length?ex.map(function(e){
     const k='e:'+e.id;
@@ -198,10 +198,10 @@ function pendN(){return db.contribs.filter(function(c){return c.status==='pendin
 function banner(me){const n=pendN();return (me.role==='admin'&&n)?'<div class="card" style="border-color:var(--ko)"><b>'+n+' مساهمة في انتظار تأكيدك</b><button class="main" style="margin-top:10px" onclick="go(\'admin\')">مراجعة</button></div>':''}
 function pendingBox(){
   const pend=db.contribs.filter(function(c){return c.status==='pending'}).sort(function(a,b){return a.ts-b.ts});
-  return '<h3 style="margin-top:0">مساهمات في الانتظار</h3><div class="card">'+(pend.length?pend.map(function(c){return '<div class="row" style="flex-direction:column"><div style="display:flex;justify-content:space-between;width:100%"><span>'+esc(nameOf(c.memberId))+'<small>'+fmtDate(c.ts)+'</small>'+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</span><b>'+money(c.amount)+'</b></div><div class="row2"><button class="ok" onclick="approve(\''+c.id+'\')">تأكيد</button><button onclick="rejectC(\''+c.id+'\')">رفض</button></div></div>'}).join(''):'<div class="empty">لا توجد مساهمات في الانتظار.</div>')+'</div>';
+  return '<h3 style="margin-top:0">مساهمات في الانتظار</h3><div class="card">'+(pend.length?pend.map(function(c){return '<div class="row" style="flex-direction:column"><div style="display:flex;justify-content:space-between;width:100%"><span>'+esc(nameOf(c.memberId))+'<small>'+fmtDate(c.ts)+'</small>'+(c.paidTs?'<small>دفع فعليا: '+fmtDay(c.paidTs)+'</small>':'')+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</span><b>'+money(c.amount)+'</b></div><div class="row2"><button class="ok" onclick="approve(\''+c.id+'\')">تأكيد</button><button onclick="rejectC(\''+c.id+'\')">رفض</button></div></div>'}).join(''):'<div class="empty">لا توجد مساهمات في الانتظار.</div>')+'</div>';
 }
-function approve(id){backend.update('contribs',id,{status:'ok'}).catch(function(e){toast(fbMsg(e))})}
-function rejectC(id){backend.update('contribs',id,{status:'rejected'}).catch(function(e){toast(fbMsg(e))})}
+function approve(id){backend.update('contribs',id,{status:'ok',seen:false}).catch(function(e){toast(fbMsg(e))})}
+function rejectC(id){backend.update('contribs',id,{status:'rejected',seen:false}).catch(function(e){toast(fbMsg(e))})}
 
 function expOp(e){return{ts:e.ts,kind:e.type==='repay'?'in':'out',label:e.title,amount:e.amount}}
 function outSum(a){return a.reduce(function(t,e){return t+(e.type==='repay'?-e.amount:e.amount)},0)}
@@ -380,9 +380,10 @@ function srcGrid(){
   return h+'</div>';
 }
 function srcCard(){
-  const s=srcStats();
+  const s=srcStats(),outT=db.payments.reduce(function(t,p){return t+(Number(p.outAmount)||0)},0);
   return '<h3>الدار آزرو · '+s.y+'</h3><div class="card">'+srcGrid()+
-  '<div class="cards" style="margin-top:12px"><div class="m g"><b class="in">'+money(s.got)+'</b><span>مجموع الدفعات</span></div><div class="m r"><b class="out">'+s.unpaid.length+' شهر</b><span>ماخلاصش</span></div><div class="m b"><b style="color:var(--ac)">'+money(s.owed)+'</b><span>الباقي عليه</span></div></div></div>';
+  '<div class="cards" style="margin-top:12px"><div class="m g"><b class="in">'+money(s.got)+'</b><span>داخل</span></div><div class="m r"><b class="out">'+money(outT)+'</b><span>خارج</span></div><div class="m b"><b style="color:var(--ac)">'+money(s.got-outT)+'</b><span>الرصيد دابا</span></div></div>'+
+  '<div class="row" style="margin-top:10px"><span>شهور ماخلاصش</span><b>'+s.unpaid.length+' شهر</b></div><div class="row"><span>الباقي عليه</span><b>'+money(s.owed)+'</b></div></div>';
 }
 function homeView(me){
   const i=sum(okC()),o=outSum(db.expenses),mk=monthKey(Date.now()),list=ops({contribs:inM(okC(),mk),expenses:inM(db.expenses,mk)});
@@ -401,14 +402,31 @@ function monthView(){
   '<h3>المساهمات</h3>'+listBox(cs.sort(function(a,b){return b.ts-a.ts}).map(function(c){return{ts:c.ts,kind:'in',label:nameOf(c.memberId),amount:c.amount,comment:c.comment}}),'لا توجد مساهمات في هذا الشهر.')+
   '<h3>المصاريف والسلف والإرجاع</h3>'+listBox(es.sort(function(a,b){return b.ts-a.ts}).map(expOp),'لا توجد مصاريف في هذا الشهر.');
 }
+let outKey=null;
+function isoOf(ts){const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function fmtDay(ts){const d=new Date(ts);return d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()}
 function payView(me){
   const k=monthKey(Date.now());
-  const mine=db.contribs.find(c=>c.memberId===me.id&&c.status!=='rejected'&&monthKey(c.ts)===k);
-  const rej=db.contribs.some(c=>c.memberId===me.id&&c.status==='rejected'&&monthKey(c.ts)===k);
-  const t='<h2>مساهمة شهر '+monthLabel(k)+'</h2>';
-  if(mine)return t+'<div class="card"><label style="margin-top:0">اسم المساهم</label><input value="'+esc(me.name)+'" readonly><label>المبلغ</label><input value="'+mine.amount+'" readonly><label>التعليق</label><input value="'+esc(mine.comment||'')+'" readonly><p class="note">سجلت في '+fmtDate(mine.ts)+'. لا يمكن تعديلها.</p>'+(mine.status==='pending'?'<p class="note" style="color:var(--ko)">في انتظار تأكيد الأدمن. لن تظهر في لوحة القيادة قبل تأكيدها.</p>':'<p class="note" style="color:var(--ok)">أكدها الأدمن وظهرت في لوحة القيادة.</p>')+'</div>';
-  return t+'<div class="card">'+(rej?'<p class="note" style="color:var(--ko);margin:0 0 8px">رفض الأدمن مساهمتك السابقة. يمكنك إرسال مساهمة جديدة.</p>':'')+'<label style="margin-top:0">اسم المساهم</label><input value="'+esc(me.name)+'" readonly><label>المبلغ بالدرهم</label><input id="amt" type="text" inputmode="decimal" placeholder="500"><label>تعليق (اختياري)</label><input id="cmt" placeholder="أضف ملاحظة">'+
-  '<div class="err" id="err"></div><button class="main" onclick="pay()">تأكيد المساهمة</button><div id="cf"></div><p class="note">بعد التأكيد لا يمكن تعديل المبلغ ولا التعليق.</p></div>';
+  const mineAll=db.contribs.filter(function(c){return c.memberId===me.id&&monthKey(c.ts)===k}).sort(function(a,b){return b.ts-a.ts});
+  const unseen=db.contribs.filter(function(c){return c.memberId===me.id&&c.seen===false&&c.status!=='pending'});
+  const note=unseen.length?'<div class="card" style="border-color:var(--ac)"><b>عندك '+unseen.length+' تحديث على مساهماتك</b>'+unseen.map(function(c){return '<div class="row"><span>'+money(c.amount)+'</span><span>'+(c.status==='ok'?'تأكدات':'ترفضات')+'</span></div>'}).join('')+'<button class="main" style="margin-top:10px" onclick="markSeen()">فهمت</button></div>':'';
+  const list=mineAll.map(function(c){
+    const st=c.status==='ok'?'مؤكدة':c.status==='rejected'?'مرفوضة':'في الانتظار';
+    const col=c.status==='ok'?'var(--ok)':c.status==='rejected'?'var(--ko)':'var(--ac)';
+    return '<div class="row"><div><b>'+money(c.amount)+'</b>'+(c.paidTs?'<small>تاريخ الدفع: '+fmtDay(c.paidTs)+'</small>':'')+'<small>سجلت: '+fmtDate(c.ts)+'</small>'+(c.comment?'<small>'+esc(c.comment)+'</small>':'')+'</div><span style="color:'+col+'">'+st+'</span></div>';
+  }).join('');
+  return '<h2>مساهمة شهر '+monthLabel(k)+'</h2>'+note+
+  '<div class="card"><label style="margin-top:0">اسم المساهم</label><input value="'+esc(me.name)+'" readonly><label>المبلغ بالدرهم</label><input id="amt" type="text" inputmode="decimal" placeholder="500"><label>تاريخ الدفع الفعلي</label><input id="pd" type="date" value="'+isoOf(Date.now())+'"><label>تعليق (اختياري)</label><input id="cmt" placeholder="أضف ملاحظة"><div class="err" id="err"></div><button class="main" onclick="pay()">تأكيد المساهمة</button><div id="cf"></div></div>'+
+  (list?'<h3>مساهماتي هاد الشهر</h3><div class="card">'+list+'</div>':'');
+}
+function markSeen(){const me=cur();db.contribs.filter(function(c){return c.memberId===me.id&&c.seen===false&&c.status!=='pending'}).forEach(function(c){backend.update('contribs',c.id,{seen:true}).catch(function(e){toast(fbMsg(e))})})}
+function backToPending(id){backend.update('contribs',id,{status:'pending'}).then(function(){editKey=null}).catch(function(e){toast(fbMsg(e))})}
+function saveOut(id){
+  const p=db.payments.find(function(x){return x.id===id});if(!p)return;
+  const a=num($('#oa').value),d=$('#od').value;
+  if(!(a>0)||a>Number(p.amount))return toast('أدخل مبلغا صحيحا (ما يتعداش مبلغ الدفعة)');
+  if(!d)return toast('اختار تاريخ الخروج');
+  backend.update('payments',id,{outAmount:a,outTs:new Date(d+'T12:00:00').getTime()}).then(function(){outKey=null;render()}).catch(function(e){toast(fbMsg(e))})
 }
 function pay(){
   const a=num($('#amt').value);
@@ -417,10 +435,10 @@ function pay(){
   $('#cf').innerHTML='<div class="card" style="border-color:var(--ac);margin:14px 0 0"><b>'+money(a)+'</b><p class="note">بعد التأكيد لا يمكن تعديل المبلغ ولا التعليق. هل تريد المتابعة؟</p><button class="main" style="margin-top:10px" onclick="doPay()">نعم، أؤكد</button><button style="width:100%;margin-top:8px" onclick="$(\'#cf\').innerHTML=\'\'">رجوع</button></div>';
 }
 function doPay(){
-  const me=cur(),a=num($('#amt').value),c=$('#cmt').value.trim();
+  const me=cur(),a=num($('#amt').value),c=$('#cmt').value.trim(),pdv=$('#pd')?$('#pd').value:'';
   if(!(a>0)||!me)return;
   $('#cf').innerHTML='<p class="note">جار الحفظ…</p>';
-  backend.add('contribs',{memberId:me.id,amount:a,comment:c,ts:Date.now(),status:me.role==='admin'?'ok':'pending'}).then(function(){tab=me.role==='admin'?'home':'pay';render();window.scrollTo(0,0)}).catch(function(e){$('#cf').innerHTML='<div class="err">'+fbMsg(e)+'</div>'});
+  backend.add('contribs',{memberId:me.id,amount:a,comment:c,ts:Date.now(),paidTs:pdv?new Date(pdv+'T12:00:00').getTime():null,status:me.role==='admin'?'ok':'pending'}).then(function(){tab=me.role==='admin'?'home':'pay';render();window.scrollTo(0,0)}).catch(function(e){$('#cf').innerHTML='<div class="err">'+fbMsg(e)+'</div>'});
 }
 function membersView(me){
   const rows=db.members.filter(m=>m.role!=='admin').map(m=>'<div class="row"><div>'+esc(m.name)+(m.role==='admin'?' <small style="display:inline">(أدمن)</small>':'')+(me.role==='admin'?'<small>'+esc(m.phone)+'</small>':'')+'</div><b>'+money(sum(okC().filter(c=>c.memberId===m.id)))+'</b></div>').join('');
@@ -449,12 +467,16 @@ function srcSettings(){
 function srcForm(isAdm){
   const s=srcStats(),boxes=[];
   for(let m=1;m<=12;m++){boxes.push('<label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" class="sm" value="'+srcKey(s.y,m)+'" style="width:auto">'+MONTHS[m-1]+'</label>')}
-  const today=new Date(),iso=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
-  const list=db.payments.slice().sort(function(a,b){return b.ts-a.ts}).slice(0,10).map(function(p){
-    return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee"><span>'+money(p.amount)+' · '+(p.months||[]).map(monthLabel).join('، ')+' · '+fmtDate(p.ts)+'</span>'+(isAdm?delBtn('pay'+p.id,"deletePay('"+p.id+"')"):'')+'</div>'}).join('');
-  return '<div class="card"><h3 style="margin-top:0">تسجيل دفعة</h3><label>تاريخ الدفعة</label><input id="sp_d" type="date" value="'+iso+'"><label>المبلغ بالدرهم</label><input id="sp_a" type="text" inputmode="decimal" value="'+SRC_MONTHLY+'"><label>الشهور اللي خلصها</label>'+boxes.join('')+
+  const list=db.payments.slice().sort(function(a,b){return b.ts-a.ts}).slice(0,30).map(function(p){
+    const head='<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span><b>'+money(p.amount)+'</b> · دخل: '+fmtDay(p.ts)+' · '+(p.months||[]).map(monthLabel).join('، ')+'</span>'+(isAdm?delBtn('pay'+p.id,"deletePay('"+p.id+"')"):'')+'</div>';
+    const outLine=p.outAmount?'<small>خرج: '+money(p.outAmount)+(p.outTs?' · فـ '+fmtDay(p.outTs):'')+'</small>':'';
+    const btn=(isAdm&&outKey!==p.id)?'<div><button style="margin-top:6px" onclick="outKey=\''+p.id+'\';render()">تسجيل خروج</button></div>':'';
+    const frm=(isAdm&&outKey===p.id)?'<div style="margin-top:6px"><label>المبلغ اللي خرج</label><input id="oa" type="text" inputmode="decimal" value="'+(p.outAmount||p.amount)+'"><label>تاريخ الخروج</label><input id="od" type="date" value="'+isoOf(Date.now())+'"><div class="row2"><button class="ok" onclick="saveOut(\''+p.id+'\')">حفظ</button><button onclick="outKey=null;render()">إلغاء</button></div></div>':'';
+    return '<div style="padding:8px 0;border-bottom:1px solid #eee">'+head+outLine+btn+frm+'</div>';
+  }).join('');
+  return '<div class="card"><h3 style="margin-top:0">تسجيل دفعة</h3><label>تاريخ الدفعة (دخول)</label><input id="sp_d" type="date" value="'+isoOf(Date.now())+'"><label>المبلغ بالدرهم</label><input id="sp_a" type="text" inputmode="decimal" value="'+SRC_MONTHLY+'"><label>الشهور اللي خلصها</label>'+boxes.join('')+
   '<div class="err" id="err5"></div><button class="main" style="margin-top:8px" onclick="addPayment()">تسجيل الدفعة</button>'+
-  (list?'<h3>آخر الدفعات</h3>'+list:'')+'</div>';
+  (list?'<h3>كل الدفعات (آخر 30)</h3>'+list:'')+'</div>';
 }
 function saveRecorder(){const v=$('#sm_r').value;FS.collection('meta').doc('source').set({recorderId:v||null},{merge:true}).then(render).catch(function(e){toast(fbMsg(e))})}
 function saveMonthly(){const v=num($('#sm_m').value);if(!(v>0)){toast('أدخل مبلغا صحيحا');return}FS.collection('meta').doc('source').set({monthly:v},{merge:true}).then(render).catch(function(e){toast(fbMsg(e))})}
