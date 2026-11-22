@@ -454,12 +454,10 @@ function addMember(){
   err('جار الإضافة…');
   backend.addMember(n,p,c).then(render).catch(function(e){err(fbMsg(e))});
 }
-function adminBase(){
-  const k=monthKey(Date.now()),list=db.expenses.filter(e=>monthKey(e.ts)===k).sort((a,b)=>b.ts-a.ts);
-  return '<h2>الإدارة</h2>'+pendingBox()+'<div class="card"><h3 style="margin-top:0">تسجيل مصروف</h3><label>البيان</label><input id="et" placeholder="شراء مستلزمات"><label>المبلغ بالدرهم</label><input id="ea" type="text" inputmode="decimal"><div class="err" id="err1"></div><button class="main" style="margin-top:8px" onclick="addExpense()">إضافة مصروف</button></div>'+
+function adminBase(){return '<h2>الإدارة</h2>'+pendingBox()}
+function opsForms(){return '<div class="card"><h3 style="margin-top:0">تسجيل مصروف</h3><label>البيان</label><input id="et" placeholder="شراء مستلزمات"><label>المبلغ بالدرهم</label><input id="ea" type="text" inputmode="decimal"><div class="err" id="err1"></div><button class="main" style="margin-top:8px" onclick="addExpense()">إضافة مصروف</button></div>'+
   '<div class="card"><h3 style="margin-top:0">سلفة الشهر</h3><label>العضو</label><select id="lm">'+db.members.map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join('')+'</select><label>المبلغ بالدرهم</label><input id="la" type="text" inputmode="decimal"><div class="err" id="err2"></div><button class="main" style="margin-top:8px" onclick="addLoan()">تسجيل السلفة</button></div>'+
-  repayCard()+'<h3>مصاريف وسلف هذا الشهر</h3><div class="card">'+(list.length?list.map(e=>opRow(expOp(e))).join(''):'<div class="empty">لا توجد مصاريف بعد.</div>')+'</div>';
-}
+  repayCard();}
 function srcSettings(){
   const sel='<select id="sm_r"><option value="">بلا</option>'+db.members.map(function(m){return '<option value="'+m.id+'"'+(m.id===SRC_RECORDER?' selected':'')+'>'+esc(m.name)+'</option>'}).join('')+'</select>';
   return '<div class="card"><h3 style="margin-top:0">إعدادات الدار آزرو</h3><label>المبلغ الشهري بالدرهم</label><input id="sm_m" type="text" inputmode="decimal" value="'+SRC_MONTHLY+'"><button class="main" style="margin-top:8px" onclick="saveMonthly()">حفظ المبلغ الشهري</button><hr><label>العضو اللي يقدر يسجل الدفعات</label>'+sel+'<button class="main" style="margin-top:8px" onclick="saveRecorder()">حفظ</button></div>';
@@ -489,7 +487,7 @@ function addPayment(){
 }
 function deletePay(id){backend.del('payments',id).then(function(){delKey=null}).catch(function(e){toast(fbMsg(e))})}
 function adminView(){return adminBase()+fixView()}
-function darView(me){const isAdm=me.role==='admin',canRec=isAdm||me.id===SRC_RECORDER;return '<h2>الدار آزرو</h2>'+srcCard()+(isAdm?srcSettings():'')+(canRec?srcForm(isAdm):'')}
+function darView(me){const isAdm=me.role==='admin',canRec=isAdm||me.id===SRC_RECORDER;return '<h2>الدار آزرو</h2>'+srcCard()+(isAdm?srcSettings():'')+(canRec?srcForm(isAdm):'')+(isAdm?opsForms():'')+'<h3>عمليات الصندوق</h3>'+listBox(db.expenses.slice().sort(function(a,b){return b.ts-a.ts}).slice(0,60).map(expOp),'لا توجد عمليات بعد.')}
 function addExpense(){
   const t=$('#et').value.trim(),a=num($('#ea').value);
   if(!t)return $('#err1').textContent='أدخل البيان';
